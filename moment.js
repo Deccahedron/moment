@@ -1802,7 +1802,7 @@ var baseConfig = {
 var locales = {};
 var localeFamilies = {};
 var globalLocale;
-
+var pinnedLocale;
 function normalizeLocale(key) {
     return key ? key.toLowerCase().replace('_', '-') : key;
 }
@@ -1854,6 +1854,11 @@ function loadLocale(name) {
 // locale key.
 function getSetGlobalLocale (key, values) {
     var data;
+    if(pinnedLocale) {
+        globalLocale = pinnedLocale;
+        return globalLocale._abbr;
+    }
+
     if (key) {
         if (isUndefined(values)) {
             data = getLocale(key);
@@ -1955,7 +1960,7 @@ function getLocale (key) {
     }
 
     if (!key) {
-        return globalLocale;
+        return pinnedLocale ? pinnedLocale : globalLocale;
     }
 
     if (!isArray(key)) {
@@ -3385,6 +3390,10 @@ function toNow (withoutSuffix) {
 // variables for this instance.
 function locale (key) {
     var newLocaleData;
+    if(pinnedLocale) {
+        this._locale = pinnedLocale;
+        return this._locale._abbr;
+    }
 
     if (key === undefined) {
         return this._locale._abbr;
@@ -3396,6 +3405,35 @@ function locale (key) {
         return this;
     }
 }
+
+
+var hasPinnedLocale = function hasPinnedLocale () {
+    if(pinnedLocale) {
+        return true;
+    }
+    return false;
+}
+
+var setPinnedLocale = function setPinnedLocale (key) {
+    var newLocaleData;
+
+    if (!key) {
+        pinnedLocale = undefined;
+        return;
+    } else {
+        newLocaleData = getLocale(key);
+        if (newLocaleData != null) {
+            pinnedLocale = newLocaleData;
+            globalLocale = pinnedLocale;
+        }
+        return pinnedLocale._abbr;
+    }
+}
+
+var getPinnedLocale = function getPinnedLocale () {
+    return pinnedLocale;
+}
+
 
 var lang = deprecate(
     'moment().lang() is deprecated. Instead, use moment().localeData() to get the language configuration. Use moment().locale() to change languages.',
@@ -3409,6 +3447,9 @@ var lang = deprecate(
 );
 
 function localeData () {
+    if(pinnedLocale) {
+        this._locale = pinnedLocale;
+    }
     return this._locale;
 }
 
@@ -4515,6 +4556,9 @@ hooks.normalizeUnits        = normalizeUnits;
 hooks.relativeTimeRounding  = getSetRelativeTimeRounding;
 hooks.relativeTimeThreshold = getSetRelativeTimeThreshold;
 hooks.calendarFormat        = getCalendarFormat;
+hooks.getPinnedLocale       = getPinnedLocale;
+hooks.setPinnedLocale       = setPinnedLocale;
+hooks.hasPinnedLocale       = hasPinnedLocale;
 hooks.prototype             = proto;
 
 // currently HTML5 input type only supports 24-hour formats
